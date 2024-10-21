@@ -25,6 +25,8 @@ function App() {
     setSelectedCollectionId(collectionResponse?.[0]?.id);
   }, [collectionResponse]);
 
+
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
@@ -54,9 +56,9 @@ function App() {
             </div>
           </div>
           <div className="w-4/5 ml-4">
-            <MoveItemsWidget selectedCollectionId={selectedCollectionId} collectionResponse={collectionResponse} ></MoveItemsWidget>
+            <MoveItemsWidget {...{ selectedCollectionId, collectionResponse }} ></MoveItemsWidget>
             {selectedCollectionId && (
-              <CompanyTable selectedCollectionId={selectedCollectionId} setSelectionModels={setSelectionModels} selectionModels={selectionModels}/>
+              <CompanyTable {...{ selectedCollectionId, setSelectionModels, selectionModels}}/>
             )}
           </div>
         </div>

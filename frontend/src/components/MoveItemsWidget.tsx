@@ -1,6 +1,10 @@
-const MoveItemsWidget = (props:{ selectedCollectionId:string , collectionResponse }) => {
-    let collectionName = props.selectedCollectionId ? props.collectionResponse.find((collection) => collection.id === props.selectedCollectionId).collection_name : ''
-    let targetCollections = props.selectedCollectionId ? props.collectionResponse?.filter((collection)=>collection.id !== props.selectedCollectionId):[]
+interface MoveItemsWidgetProps {
+    selectedCollectionId:string
+    collectionResponse:any
+}
+const MoveItemsWidget:React.FC<MoveItemsWidgetProps> = ({ selectedCollectionId, collectionResponse })  => {
+    let collectionName = selectedCollectionId ? collectionResponse.find((collection) => collection.id === selectedCollectionId).collection_name : ''
+    let targetCollections = selectedCollectionId ? collectionResponse?.filter((collection)=>collection.id !== selectedCollectionId):[]
     return(
         <div className='flex justify-between items-center'>
             <div>

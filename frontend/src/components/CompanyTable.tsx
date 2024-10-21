@@ -2,30 +2,35 @@ import { DataGrid, GridRowSelectionModel } from "@mui/x-data-grid";
 import { useEffect, useState } from "react";
 import { getCollectionsById, ICompany } from "../utils/jam-api";
 import React from "react";
-
-const CompanyTable = (props: { selectedCollectionId: string , selectionModels:{ [key: string]: GridRowSelectionModel } , setSelectionModels:React.Dispatch<React.SetStateAction<{ [key: string]: GridRowSelectionModel }>>}) => {
+interface CompanyTableProps{
+  selectedCollectionId: string
+  selectionModels:{ [key: string]: GridRowSelectionModel }
+  setSelectionModels:React.Dispatch<React.SetStateAction<{ [key: string]: GridRowSelectionModel }>>
+}
+const CompanyTable:React.FC<CompanyTableProps> = ({ selectedCollectionId, selectionModels,setSelectionModels }) => {
   const [response, setResponse] = useState<ICompany[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [offset, setOffset] = useState<number>(0);
   const [pageSize, setPageSize] = useState(25);
 
+
   useEffect(() => {
-    getCollectionsById(props.selectedCollectionId, offset, pageSize).then(
+    getCollectionsById(selectedCollectionId, offset, pageSize).then(
       (newResponse) => {
         setResponse(newResponse.companies);
         setTotal(newResponse.total);
       }
     );
-  }, [props.selectedCollectionId, offset, pageSize]);
+  }, [selectedCollectionId, offset, pageSize]);
 
   useEffect(() => {
     setOffset(0);
-  }, [props.selectedCollectionId]);
+  }, [selectedCollectionId]);
 
   const handleSelectionChange = (newSelectionModel: GridRowSelectionModel) => {
-    props.setSelectionModels((prevSelectionModels) => ({
+    setSelectionModels((prevSelectionModels) => ({
       ...prevSelectionModels,
-      [props.selectedCollectionId]: newSelectionModel,
+      [selectedCollectionId]: newSelectionModel,
     }));
   };
 
@@ -53,7 +58,7 @@ const CompanyTable = (props: { selectedCollectionId: string , selectionModels:{ 
           setOffset(newMeta.page * newMeta.pageSize);
         }}
         keepNonExistentRowsSelected
-        rowSelectionModel={props.selectionModels[props.selectedCollectionId] || []}
+        rowSelectionModel={selectionModels[selectedCollectionId] || []}
         onRowSelectionModelChange={handleSelectionChange}   
       />
     </div>
