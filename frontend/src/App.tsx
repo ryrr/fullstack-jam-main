@@ -5,6 +5,7 @@ import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { GridRowSelectionModel } from "@mui/x-data-grid";
 import { useEffect, useState } from "react";
 import CompanyTable from "./components/CompanyTable";
+import MoveItemsWidget from "./components/MoveItemsWidget"
 import { getCollectionsMetadata } from "./utils/jam-api";
 import useApi from "./utils/useApi";
 
@@ -18,6 +19,7 @@ function App() {
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>();
   const { data: collectionResponse } = useApi(() => getCollectionsMetadata());
   const [selectionModels, setSelectionModels] = useState<{ [key: string]: GridRowSelectionModel }>({});
+
 
   useEffect(() => {
     setSelectedCollectionId(collectionResponse?.[0]?.id);
@@ -52,6 +54,7 @@ function App() {
             </div>
           </div>
           <div className="w-4/5 ml-4">
+            <MoveItemsWidget selectedCollectionId={selectedCollectionId} collectionResponse={collectionResponse} ></MoveItemsWidget>
             {selectedCollectionId && (
               <CompanyTable selectedCollectionId={selectedCollectionId} setSelectionModels={setSelectionModels} selectionModels={selectionModels}/>
             )}
