@@ -1,14 +1,19 @@
+import { useState } from "react"
+
 interface MoveItemsWidgetProps {
     selectedCollectionId:string
     collectionResponse:any
+    moveItems:(targetCollection : string) => void
 }
-const MoveItemsWidget:React.FC<MoveItemsWidgetProps> = ({ selectedCollectionId, collectionResponse })  => {
+const MoveItemsWidget:React.FC<MoveItemsWidgetProps> = ({ selectedCollectionId, collectionResponse, moveItems })  => {
     let collectionName = selectedCollectionId ? collectionResponse.find((collection) => collection.id === selectedCollectionId).collection_name : ''
     let targetCollections = selectedCollectionId ? collectionResponse?.filter((collection)=>collection.id !== selectedCollectionId):[]
+    const [targetCollectionId,setTargetCollectionId] = useState<string>(targetCollections[0])
+
     return(
         <div className='flex justify-between items-center'>
             <div>
-                <button>MOVE</button>
+                <button onClick={()=>{moveItems(targetCollectionId)}}>MOVE</button>
                 <select className='font-bold'>
                     <option>SELECTED</option>
                     <option>ALL</option>
@@ -20,7 +25,7 @@ const MoveItemsWidget:React.FC<MoveItemsWidgetProps> = ({ selectedCollectionId, 
             </div>
             <div>
                 <span>TO:  </span>
-                <select className='font-bold'>
+                <select className='font-bold' onChange={(e)=>{setTargetCollectionId(e.target.value)}}>
                     {targetCollections.map((collection)=>{
                         return(
                             <option value={collection.id}>{collection.collection_name}</option>

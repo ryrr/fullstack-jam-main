@@ -20,11 +20,16 @@ function App() {
   const { data: collectionResponse } = useApi(() => getCollectionsMetadata());
   const [selectionModels, setSelectionModels] = useState<{ [key: string]: GridRowSelectionModel }>({});
 
-
   useEffect(() => {
     setSelectedCollectionId(collectionResponse?.[0]?.id);
   }, [collectionResponse]);
 
+  const moveItems = (targetCollection:string) : void => {
+    const sourceCollection = selectedCollectionId
+    //call database move(sourceCollection,targetCollection,Ids) function here once implemented 
+    console.log(`source:${sourceCollection} target:${targetCollection}`)
+    console.log('selectedIDs:'+ selectionModels[selectedCollectionId])
+  }
 
 
   return (
@@ -56,7 +61,7 @@ function App() {
             </div>
           </div>
           <div className="w-4/5 ml-4">
-            <MoveItemsWidget {...{ selectedCollectionId, collectionResponse }} ></MoveItemsWidget>
+            <MoveItemsWidget {...{ selectedCollectionId, collectionResponse,moveItems }} ></MoveItemsWidget>
             {selectedCollectionId && (
               <CompanyTable {...{ selectedCollectionId, setSelectionModels, selectionModels}}/>
             )}

@@ -2,11 +2,13 @@ import { DataGrid, GridRowSelectionModel } from "@mui/x-data-grid";
 import { useEffect, useState } from "react";
 import { getCollectionsById, ICompany } from "../utils/jam-api";
 import React from "react";
+
 interface CompanyTableProps{
   selectedCollectionId: string
   selectionModels:{ [key: string]: GridRowSelectionModel }
   setSelectionModels:React.Dispatch<React.SetStateAction<{ [key: string]: GridRowSelectionModel }>>
 }
+
 const CompanyTable:React.FC<CompanyTableProps> = ({ selectedCollectionId, selectionModels,setSelectionModels }) => {
   const [response, setResponse] = useState<ICompany[]>([]);
   const [total, setTotal] = useState<number>(0);
