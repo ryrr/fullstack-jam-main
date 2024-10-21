@@ -2,6 +2,7 @@ import "./App.css";
 
 import CssBaseline from "@mui/material/CssBaseline";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { GridRowSelectionModel } from "@mui/x-data-grid";
 import { useEffect, useState } from "react";
 import CompanyTable from "./components/CompanyTable";
 import { getCollectionsMetadata } from "./utils/jam-api";
@@ -16,6 +17,7 @@ const darkTheme = createTheme({
 function App() {
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>();
   const { data: collectionResponse } = useApi(() => getCollectionsMetadata());
+  const [selectionModels, setSelectionModels] = useState<{ [key: string]: GridRowSelectionModel }>({});
 
   useEffect(() => {
     setSelectedCollectionId(collectionResponse?.[0]?.id);
@@ -51,7 +53,7 @@ function App() {
           </div>
           <div className="w-4/5 ml-4">
             {selectedCollectionId && (
-              <CompanyTable selectedCollectionId={selectedCollectionId} />
+              <CompanyTable selectedCollectionId={selectedCollectionId} setSelectionModels={setSelectionModels} selectionModels={selectionModels}/>
             )}
           </div>
         </div>

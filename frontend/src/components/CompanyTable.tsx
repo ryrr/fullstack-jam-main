@@ -1,8 +1,9 @@
-import { DataGrid } from "@mui/x-data-grid";
+import { DataGrid, GridRowSelectionModel } from "@mui/x-data-grid";
 import { useEffect, useState } from "react";
 import { getCollectionsById, ICompany } from "../utils/jam-api";
+import React from "react";
 
-const CompanyTable = (props: { selectedCollectionId: string }) => {
+const CompanyTable = (props: { selectedCollectionId: string , selectionModels:{ [key: string]: GridRowSelectionModel } , setSelectionModels:React.Dispatch<React.SetStateAction<{ [key: string]: GridRowSelectionModel }>>}) => {
   const [response, setResponse] = useState<ICompany[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [offset, setOffset] = useState<number>(0);
@@ -20,6 +21,13 @@ const CompanyTable = (props: { selectedCollectionId: string }) => {
   useEffect(() => {
     setOffset(0);
   }, [props.selectedCollectionId]);
+
+  const handleSelectionChange = (newSelectionModel: GridRowSelectionModel) => {
+    props.setSelectionModels((prevSelectionModels) => ({
+      ...prevSelectionModels,
+      [props.selectedCollectionId]: newSelectionModel,
+    }));
+  };
 
   return (
     <div style={{ height: 800, width: "100%" }}>
@@ -44,6 +52,9 @@ const CompanyTable = (props: { selectedCollectionId: string }) => {
           setPageSize(newMeta.pageSize);
           setOffset(newMeta.page * newMeta.pageSize);
         }}
+        keepNonExistentRowsSelected
+        rowSelectionModel={props.selectionModels[props.selectedCollectionId] || []}
+        onRowSelectionModelChange={handleSelectionChange}   
       />
     </div>
   );
