@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query,HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -19,6 +19,11 @@ class CompanyOutput(BaseModel):
 class CompanyBatchOutput(BaseModel):
     companies: list[CompanyOutput]
     total: int
+
+class MoveCompanyInput(BaseModel):
+    company_id: int
+    source_collection: str
+    target_collection: str
 
 
 def fetch_companies_with_liked(
@@ -74,3 +79,56 @@ def get_companies(
         companies=companies,
         total=count,
     )
+
+@router.post("/move")
+def move_company(
+    payload:MoveCompanyInput,
+    db: Session = Depends(database.get_db),
+):
+    source_collection = (
+        db.query(database.CompanyCollection)
+        .filter(database.CompanyCollection.id == payload.source_collection)
+        .first()
+    )
+
+    if not source_collection:
+        raise HTTPException(status_code=404, detail="Source collection not found")
+
+    target_collection = (
+        db.query(database.CompanyCollection)
+        .filter(database.CompanyCollection.id == payload.target_collection)
+        .first()
+    )
+
+    if not target_collection:
+        raise HTTPException(status_code=404, detail="Target collection not found")
+
+    company_in_source = (
+        db.query(database.CompanyCollectionAssociation)
+        .filter(database.CompanyCollectionAssociation.collection_id == source_collection.id)
+        .filter(database.CompanyCollectionAssociation.company_id == payload.company_id)
+        .first()
+    )
+
+    if not company_in_source:
+        raise HTTPException(status_code=404, detail="Company not found in Source collection")
+
+    company_in_target= (
+        db.query(database.CompanyCollectionAssociation)
+        .filter(database.CompanyCollectionAssociation.collection_id == target_collection.id)
+        .filter(database.CompanyCollectionAssociation.company_id == payload.company_id)
+        .first()
+    )
+
+    if company_in_target:
+        return {"status": "exists", "message": f"Company already exists in {payload.target_collection}"}
+
+    new_entry = database.CompanyCollectionAssociation(
+        company_id = payload.company_id,
+        collection_id=target_collection.id
+    )
+
+    db.add(new_entry)
+    db.commit()
+
+    return {"status": "success", "message": f"Company moved from {payload.source_collection} to {payload.target_collection}"}
