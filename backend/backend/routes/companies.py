@@ -1,3 +1,4 @@
+import uuid
 import math
 from fastapi import APIRouter, Depends, Query, HTTPException, BackgroundTasks
 from pydantic import BaseModel
@@ -9,6 +10,8 @@ router = APIRouter(
     prefix="/companies",
     tags=["companies"],
 )
+
+jobs = {}
 
 class CompanyOutput(BaseModel):
     id: int
@@ -63,7 +66,6 @@ def fetch_companies_with_liked(
         )
         for company, liked in results
     ]
-
 
 @router.get("", response_model=CompanyBatchOutput)
 def get_companies(
@@ -136,6 +138,26 @@ def move_company(
 
     return {"status": "success", "message": f"Company moved from {payload.source_collection} to {payload.target_collection}"}
 
+def create_job(chunks: int, job_id:str) -> str:
+    jobs[job_id] = {
+        "status": "in_progress",
+        "chunks_processed": 0,
+        "chunks": chunks
+    }
+    return job_id
+
+def update_job_progress(job_id: str):
+    if job_id in jobs:
+         jobs[job_id]["chunks_processed"] += 1
+         if jobs[job_id]["chunks_processed"] >= jobs[job_id]["chunks"]:
+             jobs[job_id]["status"] = "completed"
+
+@router.get("/job-status/{job_id}")
+def get_job_status(job_id: str):
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return jobs[job_id]
+
 def process_company_chunk(job_id: str, chunk: list, target_collection_id: int, db: Session):
     companies_in_target =(
         db.query(database.CompanyCollectionAssociation) 
@@ -155,6 +177,7 @@ def process_company_chunk(job_id: str, chunk: list, target_collection_id: int, d
         db.add(new_entry)
 
     db.commit()
+    update_job_progress(job_id)
 
 @router.post("/moveMultiple")
 def move_mult_companies(
@@ -171,13 +194,18 @@ def move_mult_companies(
     if not target_collection:
         raise HTTPException(status_code=404, detail="Target collection not found")
 
+    job_id = str(uuid.uuid4())
+
     chunk_size = 100
     num_companies = len(payload.company_ids)
     chunks = math.ceil(num_companies/chunk_size)
 
+    create_job(job_id, chunks)
+
     for i in range(chunks):
         chunk = payload.company_ids[i * chunk_size : (i + 1) * chunk_size]
         background_tasks.add_task(process_company_chunk, job_id ,chunk, target_collection.id, db)
+ 
+    return {"job_id": job_id, "message": "Moving multiple companies"}
 
-    return {"status": "success", "message": "Move multiple initiated."}
 
