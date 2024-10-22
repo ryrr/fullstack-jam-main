@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Query,HTTPException
+import math
+from fastapi import APIRouter, Depends, Query, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -9,12 +10,10 @@ router = APIRouter(
     tags=["companies"],
 )
 
-
 class CompanyOutput(BaseModel):
     id: int
     company_name: str
     liked: bool
-
 
 class CompanyBatchOutput(BaseModel):
     companies: list[CompanyOutput]
@@ -25,6 +24,10 @@ class MoveCompanyInput(BaseModel):
     source_collection: str
     target_collection: str
 
+class MoveMultCompaniesInput(BaseModel):
+    company_ids: list[int]
+    source_collection: str
+    target_collection: str
 
 def fetch_companies_with_liked(
     db: Session, company_ids: list[int]
@@ -132,3 +135,49 @@ def move_company(
     db.commit()
 
     return {"status": "success", "message": f"Company moved from {payload.source_collection} to {payload.target_collection}"}
+
+def process_company_chunk(job_id: str, chunk: list, target_collection_id: int, db: Session):
+    companies_in_target =(
+        db.query(database.CompanyCollectionAssociation) 
+        .filter(database.CompanyCollectionAssociation.collection_id == target_collection_id) 
+        .filter(database.CompanyCollectionAssociation.company_id.in_(chunk)) 
+        .all()
+    ) 
+
+    existing_company_ids = set(map(lambda association: association.company_id, companies_in_target))
+    companies_to_add = list(filter(lambda company_id: company_id not in existing_company_ids, chunk))
+
+    for company_id in companies_to_add:
+        new_entry = database.CompanyCollectionAssociation(
+            company_id=company_id,
+            collection_id=target_collection_id
+        )
+        db.add(new_entry)
+
+    db.commit()
+
+@router.post("/moveMultiple")
+def move_mult_companies(
+    payload:MoveMultCompaniesInput,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(database.get_db),
+):
+    target_collection = (
+        db.query(database.CompanyCollection)
+        .filter(database.CompanyCollection.id == payload.target_collection)
+        .first()
+    )
+
+    if not target_collection:
+        raise HTTPException(status_code=404, detail="Target collection not found")
+
+    chunk_size = 100
+    num_companies = len(payload.company_ids)
+    chunks = math.ceil(num_companies/chunk_size)
+
+    for i in range(chunks):
+        chunk = payload.company_ids[i * chunk_size : (i + 1) * chunk_size]
+        background_tasks.add_task(process_company_chunk, job_id ,chunk, target_collection.id, db)
+
+    return {"status": "success", "message": "Move multiple initiated."}
+
