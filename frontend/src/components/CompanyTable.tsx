@@ -16,41 +16,48 @@ const CompanyTable:React.FC<CompanyTableProps> = ({ selectedCollectionId, select
   const [pageSize, setPageSize] = useState(25);
 
 
-useEffect(() => {
-  setOffset(0);
-}, [selectedCollectionId]);
+
+//   useEffect(() => {
+//     retreiveCompaniesFromCache(selectedCollectionId, offset, pageSize)
+//         .then((res) => {    
+//             if (res.companies) {
+//                 console.log('cache hit')
+//                 setResponse(res.companies);
+
+//                 return res.companies;  
+//             } 
+//             return null;
+//         })
+//         .then((cachedCompanies) => {
+//             if (!cachedCompanies) {
+//                 return getCollectionsById(selectedCollectionId, offset, pageSize)
+//                     .then((newResponse) => {
+//                         console.log('grabbing all from DB')
+//                         setResponse(newResponse.companies);  
+//                         setTotal(newResponse.total);         
+//                         cacheCompanies(newResponse.companies, selectedCollectionId, offset, pageSize);
+//                     });
+//             } else {
+//                 return getCollectionsById(selectedCollectionId, offset, pageSize)
+//                     .then((newResponse) => {
+//                         console.log('grabbing total from DB')
+//                         setTotal(newResponse.total);  
+//                     });
+//             }
+//         })
+//         .catch((error) => {
+//             console.error('Error:', error);
+//         });
+// }, [selectedCollectionId, offset, pageSize]);
 
 useEffect(() => {
   const handler = setTimeout(() => {
-    retreiveCompaniesFromCache(selectedCollectionId, offset, pageSize)
-    .then((res) => {    
-        if (res.companies) {
-            console.log('cache hit')
-            setResponse(res.companies);
-            return res.companies;  
-        } 
-        return null;
-    })
-    .then((cachedCompanies) => {
-        if (!cachedCompanies) {
-            return getCollectionsById(selectedCollectionId, offset, pageSize)
-                .then((newResponse) => {
-                    console.log('grabbing all from DB')
-                    setResponse(newResponse.companies);  
-                    setTotal(newResponse.total);         
-                    cacheCompanies(newResponse.companies, selectedCollectionId, offset, pageSize);
-                });
-        } else {
-            return getCollectionsById(selectedCollectionId, offset, pageSize)
-                .then((newResponse) => {
-                    console.log('grabbing total from DB')
-                    setTotal(newResponse.total);  
-                });
-        }
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-    });
+    getCollectionsById(selectedCollectionId, offset, pageSize).then(
+      (newResponse) => {
+        setResponse(newResponse.companies);
+        setTotal(newResponse.total);
+      }
+    );
   }, 500);
 
   return () => {
@@ -59,6 +66,9 @@ useEffect(() => {
 
 }, [selectedCollectionId, offset, pageSize]);
 
+  useEffect(() => {
+    setOffset(0);
+  }, [selectedCollectionId]);
 
   const handleSelectionChange = (newSelectionModel: GridRowSelectionModel) => {
     setSelectionModels((prevSelectionModels) => ({
