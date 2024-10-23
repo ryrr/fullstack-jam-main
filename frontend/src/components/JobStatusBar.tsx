@@ -13,7 +13,6 @@ const JobStatusBar:React.FC<JobStatusBarProps> = ({ job,setActiveJobs,activeJobs
             const eventSource = new EventSource(`http://localhost:8000/companies/job-status/${job.job_id}`);
             eventSource.onmessage = (event) => {
                 const data = JSON.parse(event.data); 
-                console.log(data)
                 if(data.status === 'in_progress'){
                     let curLoadingFraction = Math.floor((data.chunks_processed/data.chunks)*100)
                     if(curLoadingFraction !== loadingFraction) setLoadingFraction(curLoadingFraction)
@@ -33,11 +32,11 @@ const JobStatusBar:React.FC<JobStatusBarProps> = ({ job,setActiveJobs,activeJobs
         }
     }, [job]); 
     return(
-        <div>
-            <span>Moving Companies from {getCollectionName(job.source_collection_id)} to {getCollectionName(job.target_collection_id)}</span>
-            <div style={{ marginTop: '20px' }}>
-                <label>Progress:</label>
-                <progress value={loadingFraction} max="100" style={{ width: '100%', height: '20px',color:'orange' }} />
+        <div className='mt-2'>
+            <span className='mt-4'>Moving Companies...</span>
+            <div >
+                <label>{getCollectionName(job.source_collection_id)} {'-->'} {getCollectionName(job.target_collection_id)}</label>
+                <progress value={loadingFraction} max="100" style={{ width: '100%', height: '20px'}} />
                 <span>{loadingFraction}%</span>
             </div>
         </div>

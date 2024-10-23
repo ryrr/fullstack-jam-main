@@ -55,10 +55,12 @@ function App() {
         moveAllCompanies(sourceCollection, targetCollection).then((res)=>{
           setJobAsActive(res.job_id,sourceCollection,targetCollection)
         })
+        break;
       case MoveType.SELECTED:
         moveCompanies(idsToMove as number[], sourceCollection, targetCollection).then((res)=>{
           setJobAsActive(res.job_id,sourceCollection,targetCollection)
         })
+        break;
       default:
           console.log("Invalid move type");
     }
@@ -92,6 +94,7 @@ function App() {
                   </div>
                 );
               })}
+              <p className=" font-bold border-b pb-2 mt-5">Jobs</p>
               {activeJobs.map((job)=> <JobStatusBar {...{ job,setActiveJobs,activeJobs,getCollectionName}}></JobStatusBar>)}
             </div>
           </div>

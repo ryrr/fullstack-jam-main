@@ -20,7 +20,7 @@ const MoveItemsWidget:React.FC<MoveItemsWidgetProps> = ({ selectedCollectionId, 
     return(
         <div className='flex justify-between items-center'>
             <div>
-                <button className='bg-green-500 mr-10' onClick={()=>{moveItems(targetCollection.id,moveType)}}>MOVE</button>
+                <button className='bg-orange-500 mr-10' onClick={()=>{moveItems(targetCollection.id,moveType)}}>MOVE</button>
                 <select className='font-bold' onChange={(e)=>{setMoveType(e.target.value)}}>
                     <option value={MoveType.SELECTED}>Selected Companies</option>
                     <option value={MoveType.ALL}>All Companies</option>
