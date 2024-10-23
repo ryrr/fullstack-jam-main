@@ -15,6 +15,14 @@ services:
     ports:
       - "5433:5432"
 
+  redis-jam:
+    image: redis:alpine
+    container_name: redis-jam
+    ports:
+      - "6379:6379"  # Redis port
+    volumes:
+      - redis_data:/data  # Optional: store Redis data persistently
+
   web-api:
     build: .
     volumes:
@@ -25,8 +33,12 @@ services:
     command: ["python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       - postgres-jam-db
+      - redis-jam  # Redis dependency
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres-jam-db:5432/harmonicjam
+      REDIS_HOST: redis-jam  # Redis hostname in Docker Compose
+      REDIS_PORT: 6379
 
 volumes:
   postgres_data:
+  redis_data:  # Optional: volume to persist Redis data
