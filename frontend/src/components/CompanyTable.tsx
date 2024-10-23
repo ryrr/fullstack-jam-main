@@ -1,6 +1,6 @@
 import { DataGrid, GridRowSelectionModel } from "@mui/x-data-grid";
 import { useEffect, useState } from "react";
-import { getCollectionsById, ICompany } from "../utils/jam-api";
+import { getCollectionsById, ICompany,cacheCompanies,retreiveCompaniesFromCache } from "../utils/jam-api";
 import React from "react";
 
 interface CompanyTableProps{
@@ -16,24 +16,49 @@ const CompanyTable:React.FC<CompanyTableProps> = ({ selectedCollectionId, select
   const [pageSize, setPageSize] = useState(25);
 
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      getCollectionsById(selectedCollectionId, offset, pageSize).then(
-        (newResponse) => {
-          setResponse(newResponse.companies);
-          setTotal(newResponse.total);
+useEffect(() => {
+  setOffset(0);
+}, [selectedCollectionId]);
+
+useEffect(() => {
+  const handler = setTimeout(() => {
+    retreiveCompaniesFromCache(selectedCollectionId, offset, pageSize)
+    .then((res) => {    
+        if (res.companies) {
+            console.log('cache hit')
+            setResponse(res.companies);
+            return res.companies;  
+        } 
+        return null;
+    })
+    .then((cachedCompanies) => {
+        if (!cachedCompanies) {
+            return getCollectionsById(selectedCollectionId, offset, pageSize)
+                .then((newResponse) => {
+                    console.log('grabbing all from DB')
+                    setResponse(newResponse.companies);  
+                    setTotal(newResponse.total);         
+                    cacheCompanies(newResponse.companies, selectedCollectionId, offset, pageSize);
+                });
+        } else {
+            return getCollectionsById(selectedCollectionId, offset, pageSize)
+                .then((newResponse) => {
+                    console.log('grabbing total from DB')
+                    setTotal(newResponse.total);  
+                });
         }
-      );
-    }, 500);
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+  }, 500);
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [selectedCollectionId, offset, pageSize]);
+  return () => {
+    clearTimeout(handler);
+  };
 
-  useEffect(() => {
-    setOffset(0);
-  }, [selectedCollectionId]);
+}, [selectedCollectionId, offset, pageSize]);
+
 
   const handleSelectionChange = (newSelectionModel: GridRowSelectionModel) => {
     setSelectionModels((prevSelectionModels) => ({
