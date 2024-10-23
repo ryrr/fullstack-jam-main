@@ -19,7 +19,7 @@ const darkTheme = createTheme({
 function App() {
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>();
   const [selectionModels, setSelectionModels] = useState<{ [key: string]: GridRowSelectionModel }>({});
-  const [activeJobs,setActiveJobs] = useState<IJob[]>([])
+  const [jobs,setJobs] = useState<IJob[]>([])
   const { data: collectionResponse } = useApi(() => getCollectionsMetadata());
   
   useEffect(() => {
@@ -37,9 +37,10 @@ function App() {
     let newJob = {
       job_id:job_id,
       source_collection_id:source_collection,
-      target_collection_id:targetCollection
+      target_collection_id:targetCollection,
+      running:true
     }
-    setActiveJobs([...activeJobs,newJob])
+    setJobs([...jobs,newJob])
   }
 
   const getCollectionName = (collectionId:string) => {
@@ -82,6 +83,7 @@ function App() {
               {collectionResponse?.map((collection) => {
                 return (
                   <div
+                    key={collection.id}
                     className={`py-1 hover:cursor-pointer hover:bg-orange-300 ${
                       selectedCollectionId === collection.id &&
                       "bg-orange-500 font-bold"
@@ -95,7 +97,7 @@ function App() {
                 );
               })}
               <p className=" font-bold border-b pb-2 mt-5">Jobs</p>
-              {activeJobs.map((job)=> <JobStatusBar {...{ job,setActiveJobs,activeJobs,getCollectionName}}></JobStatusBar>)}
+              {jobs.map((job)=> <JobStatusBar key={job.job_id}{...{ job,setJobs,jobs,getCollectionName}}></JobStatusBar>)}
             </div>
           </div>
           <div className="w-4/5 ml-4">

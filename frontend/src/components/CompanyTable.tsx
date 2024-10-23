@@ -17,12 +17,18 @@ const CompanyTable:React.FC<CompanyTableProps> = ({ selectedCollectionId, select
 
 
   useEffect(() => {
-    getCollectionsById(selectedCollectionId, offset, pageSize).then(
-      (newResponse) => {
-        setResponse(newResponse.companies);
-        setTotal(newResponse.total);
-      }
-    );
+    const handler = setTimeout(() => {
+      getCollectionsById(selectedCollectionId, offset, pageSize).then(
+        (newResponse) => {
+          setResponse(newResponse.companies);
+          setTotal(newResponse.total);
+        }
+      );
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
   }, [selectedCollectionId, offset, pageSize]);
 
   useEffect(() => {

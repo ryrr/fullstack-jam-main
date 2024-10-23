@@ -25,6 +25,7 @@ export interface IJob{
     job_id:string
     source_collection_id:string
     target_collection_id:string
+    running?:boolean
 }
 
 export enum MoveType {
@@ -103,12 +104,36 @@ export async function moveAllCompanies(sourceCollection : string, targetCollecti
     }
 }
 
-export async function getJobStatusListener(jobId : string): Promise<any> {
+//Redis stuff that ended up not being super useful, it does however work
+export async function cacheCompanies(companies: ICompany[],selectedCollectionId: string,offset: number, pageSize: number): Promise<any> {
     try {
-        const response = await axios.get(`${BASE_URL}/companies/job-status/${jobId}`);
+        const response = await axios.post(`${BASE_URL}/companies/cache_companies`, 
+            companies,{
+                params: {
+                    selectedCollectionId, 
+                    offset,             
+                    pageSize              
+                }
+            }
+        );
         return response.data;
     } catch (error) {
-        console.error('Error fetching job:', error);
+        console.error('Error caching companies:', error);
+        throw error;
+    }
+}
+
+export async function retreiveCompaniesFromCache(selectedCollectionId:string,offset:number,pageSize:number): Promise<any> {
+    const params = {
+        selectedCollectionId: selectedCollectionId,
+        offset: offset,
+        pageSize: pageSize,
+    }
+    try {
+        const response = await axios.get(`${BASE_URL}/companies/get_cached_companies`,{params});
+        return response.data;
+    } catch (error) {
+        console.error('Error moving companies:', error);
         throw error;
     }
 }

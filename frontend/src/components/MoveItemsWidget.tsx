@@ -11,7 +11,7 @@ const MoveItemsWidget:React.FC<MoveItemsWidgetProps> = ({ selectedCollectionId, 
     let selectedCollectionName : string = selectedCollectionId ? getCollectionName(selectedCollectionId) : ''
     let validTargets : ICollection[] = selectedCollectionId ? collectionResponse?.filter((collection)=>collection.id !== selectedCollectionId):[]
     const [targetCollection,setTargetCollection] = useState<ICollection>(validTargets[0])
-    const [moveType,setMoveType] = useState<string>('SELECTED')
+    const [moveType,setMoveType] = useState<MoveType|string>('SELECTED')
 
     useEffect(() => {
         setTargetCollection(validTargets[0])
@@ -35,7 +35,7 @@ const MoveItemsWidget:React.FC<MoveItemsWidgetProps> = ({ selectedCollectionId, 
                 <select className='font-bold' onChange={(e)=>{setTargetCollection(JSON.parse(e.target.value))}}>
                     {validTargets.map((collection)=>{
                         return(
-                            <option value={JSON.stringify(collection)}>{collection.collection_name}</option>
+                            <option key={collection.id}value={JSON.stringify(collection)}>{collection.collection_name}</option>
                         )
                     })}
                 </select>
