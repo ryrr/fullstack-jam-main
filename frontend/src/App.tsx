@@ -58,9 +58,12 @@ function App() {
         })
         break;
       case MoveType.SELECTED:
-        moveCompanies(idsToMove as number[], sourceCollection, targetCollection).then((res)=>{
-          setJobAsActive(res.job_id,sourceCollection,targetCollection)
-        })
+        if(!idsToMove.length) alert("You didn't select any ids!")
+        else{
+          moveCompanies(idsToMove as number[], sourceCollection, targetCollection).then((res)=>{
+            setJobAsActive(res.job_id,sourceCollection,targetCollection)
+          })
+        }
         break;
       default:
           console.log("Invalid move type");

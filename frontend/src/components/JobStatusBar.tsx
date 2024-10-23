@@ -43,14 +43,14 @@ const JobStatusBar:React.FC<JobStatusBarProps> = ({ job,setJobs,jobs,getCollecti
             {
             job.running ?
             <>
-                <span className='mt-4'>moving 🦫</span>
+                <span className='mt-4'>moving 🦫 {loadingFraction}%</span>
                 <div>
                     <label>{jobLabel}</label>
                     <progress value={loadingFraction} max="100" style={{ width: '100%', height: '20px'}} />
-                    <span>{loadingFraction}%</span>
+
                 </div>
             </>:<>
-                <span className='mt-4'>Finished ✅</span>
+                <span className='mt-4'>Complete! ✅</span>
                 <div>
                     <label>{jobLabel}</label>
                 </div>
