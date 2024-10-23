@@ -21,8 +21,8 @@ const MoveItemsWidget:React.FC<MoveItemsWidgetProps> = ({ selectedCollectionId, 
             <div>
                 <button onClick={()=>{moveItems(targetCollection.id,moveType)}}>MOVE</button>
                 <select className='font-bold' onChange={(e)=>{setMoveType(e.target.value)}}>
-                    <option value='SELECTED'>SELECTED</option>
-                    <option value='ALL'>ALL</option>
+                    <option value='SELECTED'>Selected Companies</option>
+                    <option value='ALL'>All Companies</option>
                 </select>
             </div>
             <div>
