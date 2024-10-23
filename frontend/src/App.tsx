@@ -6,7 +6,8 @@ import { GridRowSelectionModel } from "@mui/x-data-grid";
 import { useEffect, useState } from "react";
 import CompanyTable from "./components/CompanyTable";
 import MoveItemsWidget from "./components/MoveItemsWidget"
-import { getCollectionsMetadata } from "./utils/jam-api";
+import JobStatusBar from "./components/JobStatusBar"
+import { getCollectionsMetadata, moveCompanies,moveAllCompanies} from "./utils/jam-api";
 import useApi from "./utils/useApi";
 
 const darkTheme = createTheme({
@@ -17,18 +18,31 @@ const darkTheme = createTheme({
 
 function App() {
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>();
-  const { data: collectionResponse } = useApi(() => getCollectionsMetadata());
   const [selectionModels, setSelectionModels] = useState<{ [key: string]: GridRowSelectionModel }>({});
-
+  const [activeJobs,setActiveJobs] = useState<string[]>([])
+  const { data: collectionResponse } = useApi(() => getCollectionsMetadata());
+  
   useEffect(() => {
     setSelectedCollectionId(collectionResponse?.[0]?.id);
   }, [collectionResponse]);
 
-  const moveItems = (targetCollection:string) : void => {
+  const moveItems = (targetCollection : string, moveType : string) : void => {
     const sourceCollection = selectedCollectionId
-    //call database move(sourceCollection,targetCollection,Ids) function here once implemented 
-    console.log(`source:${sourceCollection} target:${targetCollection}`)
-    console.log('selectedIDs:'+ selectionModels[selectedCollectionId])
+    const idsToMove = selectionModels[selectedCollectionId]
+    //perhaps use the useAPI thing here
+    if(moveType === 'ALL'){
+      moveAllCompanies(sourceCollection, targetCollection).then((res)=>{
+        setActiveJobs([...activeJobs,res.job_id])
+      })
+    }else{
+      moveCompanies(idsToMove as number[], sourceCollection, targetCollection).then((res)=>{
+        setActiveJobs([...activeJobs,res.job_id])
+      })
+    }
+    setSelectionModels((prevSelectionModels) => ({
+      ...prevSelectionModels,
+      [selectedCollectionId]: [],
+    }));
   }
 
 
@@ -58,6 +72,7 @@ function App() {
                   </div>
                 );
               })}
+              {activeJobs.map((jobId)=> <JobStatusBar {...{ jobId,setActiveJobs,activeJobs }}></JobStatusBar>)}
             </div>
           </div>
           <div className="w-4/5 ml-4">
