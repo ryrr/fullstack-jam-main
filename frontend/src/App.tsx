@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import CompanyTable from "./components/CompanyTable";
 import MoveItemsWidget from "./components/MoveItemsWidget"
 import JobStatusBar from "./components/JobStatusBar"
-import { getCollectionsMetadata, moveCompanies,moveAllCompanies} from "./utils/jam-api";
+import { getCollectionsMetadata, moveCompanies,moveAllCompanies,MoveType,IJob} from "./utils/jam-api";
 import useApi from "./utils/useApi";
 
 const darkTheme = createTheme({
@@ -19,30 +19,50 @@ const darkTheme = createTheme({
 function App() {
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>();
   const [selectionModels, setSelectionModels] = useState<{ [key: string]: GridRowSelectionModel }>({});
-  const [activeJobs,setActiveJobs] = useState<string[]>([])
+  const [activeJobs,setActiveJobs] = useState<IJob[]>([])
   const { data: collectionResponse } = useApi(() => getCollectionsMetadata());
   
   useEffect(() => {
     setSelectedCollectionId(collectionResponse?.[0]?.id);
   }, [collectionResponse]);
 
-  const moveItems = (targetCollection : string, moveType : string) : void => {
-    const sourceCollection = selectedCollectionId
-    const idsToMove = selectionModels[selectedCollectionId]
-    //perhaps use the useAPI thing here
-    if(moveType === 'ALL'){
-      moveAllCompanies(sourceCollection, targetCollection).then((res)=>{
-        setActiveJobs([...activeJobs,res.job_id])
-      })
-    }else{
-      moveCompanies(idsToMove as number[], sourceCollection, targetCollection).then((res)=>{
-        setActiveJobs([...activeJobs,res.job_id])
-      })
-    }
+  const clearSelection = () => {
     setSelectionModels((prevSelectionModels) => ({
       ...prevSelectionModels,
       [selectedCollectionId]: [],
     }));
+  }
+
+  const setJobAsActive = (job_id:string,source_collection:string,targetCollection:string) => {
+    let newJob = {
+      job_id:job_id,
+      source_collection_id:source_collection,
+      target_collection_id:targetCollection
+    }
+    setActiveJobs([...activeJobs,newJob])
+  }
+
+  const getCollectionName = (collectionId:string) => {
+    let foundCollectionName = collectionResponse.find((collection) => collection.id === collectionId).collection_name
+    return foundCollectionName
+  }
+
+  const moveItems = (targetCollection : string, moveType : MoveType) : void => {
+    const sourceCollection = selectedCollectionId
+    const idsToMove = selectionModels[selectedCollectionId]
+    switch (moveType) {
+      case MoveType.ALL:
+        moveAllCompanies(sourceCollection, targetCollection).then((res)=>{
+          setJobAsActive(res.job_id,sourceCollection,targetCollection)
+        })
+      case MoveType.SELECTED:
+        moveCompanies(idsToMove as number[], sourceCollection, targetCollection).then((res)=>{
+          setJobAsActive(res.job_id,sourceCollection,targetCollection)
+        })
+      default:
+          console.log("Invalid move type");
+    }
+    clearSelection()
   }
 
 
@@ -72,11 +92,11 @@ function App() {
                   </div>
                 );
               })}
-              {activeJobs.map((jobId)=> <JobStatusBar {...{ jobId,setActiveJobs,activeJobs }}></JobStatusBar>)}
+              {activeJobs.map((job)=> <JobStatusBar {...{ job,setActiveJobs,activeJobs,getCollectionName}}></JobStatusBar>)}
             </div>
           </div>
           <div className="w-4/5 ml-4">
-            <MoveItemsWidget {...{ selectedCollectionId, collectionResponse,moveItems }} ></MoveItemsWidget>
+            <MoveItemsWidget {...{ selectedCollectionId, collectionResponse,moveItems,getCollectionName }} ></MoveItemsWidget>
             {selectedCollectionId && (
               <CompanyTable {...{ selectedCollectionId, setSelectionModels, selectionModels}}/>
             )}

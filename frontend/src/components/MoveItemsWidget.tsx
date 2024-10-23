@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react"
-import { ICollection } from "../utils/jam-api"
+import { ICollection , MoveType} from "../utils/jam-api"
 
 interface MoveItemsWidgetProps {
     selectedCollectionId:string
     collectionResponse:ICollection[]
     moveItems:(targetCollectionId : string, moveType : string) => void
+    getCollectionName:(collectionId:string) => string
 }
-const MoveItemsWidget:React.FC<MoveItemsWidgetProps> = ({ selectedCollectionId, collectionResponse, moveItems })  => {
-    let selectedCollectionName : string = selectedCollectionId ? collectionResponse.find((collection) => collection.id === selectedCollectionId).collection_name : ''
+const MoveItemsWidget:React.FC<MoveItemsWidgetProps> = ({ selectedCollectionId, collectionResponse, moveItems,getCollectionName })  => {
+    let selectedCollectionName : string = selectedCollectionId ? getCollectionName(selectedCollectionId) : ''
     let validTargets : ICollection[] = selectedCollectionId ? collectionResponse?.filter((collection)=>collection.id !== selectedCollectionId):[]
     const [targetCollection,setTargetCollection] = useState<ICollection>(validTargets[0])
     const [moveType,setMoveType] = useState<string>('SELECTED')
@@ -19,18 +20,18 @@ const MoveItemsWidget:React.FC<MoveItemsWidgetProps> = ({ selectedCollectionId, 
     return(
         <div className='flex justify-between items-center'>
             <div>
-                <button onClick={()=>{moveItems(targetCollection.id,moveType)}}>MOVE</button>
+                <button className='bg-green-500 mr-10' onClick={()=>{moveItems(targetCollection.id,moveType)}}>MOVE</button>
                 <select className='font-bold' onChange={(e)=>{setMoveType(e.target.value)}}>
-                    <option value='SELECTED'>Selected Companies</option>
-                    <option value='ALL'>All Companies</option>
+                    <option value={MoveType.SELECTED}>Selected Companies</option>
+                    <option value={MoveType.ALL}>All Companies</option>
                 </select>
             </div>
             <div>
-                <span>FROM:  </span>
+                <span className='mr-2'>FROM:</span>
                 <span><b>{selectedCollectionName}</b></span>
             </div>
             <div>
-                <span>TO:  </span>
+                <span className='mr-2'>TO:</span>
                 <select className='font-bold' onChange={(e)=>{setTargetCollection(JSON.parse(e.target.value))}}>
                     {validTargets.map((collection)=>{
                         return(

@@ -1,15 +1,16 @@
-import { getJobStatusListener,} from "../utils/jam-api";
+import { getJobStatusListener, IJob,} from "../utils/jam-api";
 import {useState , useEffect} from 'react'
 interface JobStatusBarProps {
-    jobId:string
-    setActiveJobs : React.Dispatch<React.SetStateAction<string[]>>
-    activeJobs: string[]
+    job:IJob
+    setActiveJobs : React.Dispatch<React.SetStateAction<IJob[]>>
+    activeJobs: IJob[]
+    getCollectionName:(collectionId:string) => string
 }
-const JobStatusBar:React.FC<JobStatusBarProps> = ({ jobId,setActiveJobs,activeJobs })  => {
+const JobStatusBar:React.FC<JobStatusBarProps> = ({ job,setActiveJobs,activeJobs,getCollectionName })  => {
     const [loadingFraction,setLoadingFraction] = useState(0)
     useEffect(() => {
-        if (jobId) {
-            const eventSource = new EventSource(`http://localhost:8000/companies/job-status/${jobId}`);
+        if (job) {
+            const eventSource = new EventSource(`http://localhost:8000/companies/job-status/${job.job_id}`);
             eventSource.onmessage = (event) => {
                 const data = JSON.parse(event.data); 
                 console.log(data)
@@ -21,7 +22,7 @@ const JobStatusBar:React.FC<JobStatusBarProps> = ({ jobId,setActiveJobs,activeJo
                     setLoadingFraction(100)
                     eventSource.close();
                     setTimeout(()=>{
-                        let newJobs = activeJobs.filter((activeId)=> activeId !== jobId)
+                        let newJobs = activeJobs.filter((activeJob)=> activeJob.job_id !== job.job_id)
                         setActiveJobs(newJobs)
                     },500)
                 }
@@ -30,10 +31,10 @@ const JobStatusBar:React.FC<JobStatusBarProps> = ({ jobId,setActiveJobs,activeJo
                 eventSource.close();
             };
         }
-    }, [jobId]); 
+    }, [job]); 
     return(
         <div>
-            <span>Job ID: {jobId}</span>
+            <span>Moving Companies from {getCollectionName(job.source_collection_id)} to {getCollectionName(job.target_collection_id)}</span>
             <div style={{ marginTop: '20px' }}>
                 <label>Progress:</label>
                 <progress value={loadingFraction} max="100" style={{ width: '100%', height: '20px',color:'orange' }} />

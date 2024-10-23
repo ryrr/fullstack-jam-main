@@ -21,6 +21,16 @@ export interface IMoveCompaniesResponse{
     job_id:string
     message:string
 }
+export interface IJob{
+    job_id:string
+    source_collection_id:string
+    target_collection_id:string
+}
+
+export enum MoveType {
+    ALL = 'ALL',
+    SELECTED = 'SELECTED'
+}
 
 const BASE_URL = 'http://localhost:8000';
 
