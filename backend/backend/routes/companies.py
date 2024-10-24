@@ -1,5 +1,6 @@
 import uuid
 import math
+import os
 import json
 from fastapi import APIRouter, Depends, Query, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse 
@@ -9,15 +10,8 @@ from sqlalchemy.future import select
 import asyncio
 from fastapi.concurrency import run_in_threadpool
 import redis.asyncio as aioredis
-import os
-
 from backend.db import database
 
-
-REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
-REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
-
-redis = aioredis.from_url(f"redis://{REDIS_HOST}:{REDIS_PORT}", decode_responses=True)
 
 router = APIRouter(
     prefix="/companies",
@@ -54,6 +48,15 @@ class JobStatusOutput(BaseModel):
     status: str
     chunks_processed: int
     chunks: int
+
+
+class CompanyCollectionMetadata(BaseModel):
+    id: uuid.UUID
+    collection_name: str
+
+
+class CompanyCollectionOutput(CompanyBatchOutput, CompanyCollectionMetadata):
+    pass
 
 def fetch_companies_with_liked(
     db: Session, company_ids: list[int]
@@ -109,23 +112,6 @@ def get_companies(
         total=count,
     )
 
-def generate_cache_key(selectedCollectionId: str, offset: int, pageSize: int) -> str:
-    return f"companies_{selectedCollectionId}_{offset}_{pageSize}"
-
-def create_job(job_id: str, chunks: int) -> str:
-    jobs[job_id] = {
-        "status": "in_progress",
-        "chunks_processed": 0,
-        "chunks": chunks,
-    }
-    return job_id
-
-def update_job_progress(job_id: str):
-    if job_id in jobs:
-        jobs[job_id]["chunks_processed"] += 1
-        if jobs[job_id]["chunks_processed"] >= jobs[job_id]["chunks"]:
-            jobs[job_id]["status"] = "completed"
-
 def get_collection_by_id(collectionId: str, db: Session) -> str:
     target_collection = (
         db.query(database.CompanyCollection)
@@ -142,11 +128,25 @@ def get_companies_by_collection_id(collectionId: str, db: Session):
     );
     return companies
 
-async def process_company_chunk_with_limit(job_id: str, chunk: list, target_collection_id: int, db: Session):
-    async with semaphore:  
-        await process_company_chunk(job_id, chunk, target_collection_id, db)
+def create_job(job_id: str, chunks: int) -> str:
+    jobs[job_id] = {
+        "status": "in_progress",
+        "chunks_processed": 0,
+        "chunks": chunks,
+    }
+    return job_id
 
-async def create_company_chunking_job(chunk_size, company_ids, target_collection, db, background_tasks: BackgroundTasks) -> str:
+def update_job_progress(job_id: str):
+    if job_id in jobs:
+        jobs[job_id]["chunks_processed"] += 1
+        if jobs[job_id]["chunks_processed"] >= jobs[job_id]["chunks"]:
+            jobs[job_id]["status"] = "completed"
+
+async def process_company_chunk_with_limit(job_id: str, chunk: list, target_collection_id: int, db: Session, redis: aioredis.Redis):
+    async with semaphore:  
+        await process_company_chunk(job_id, chunk, target_collection_id, db, redis)
+
+async def create_company_chunking_job(chunk_size, company_ids, target_collection, db, background_tasks: BackgroundTasks,redis: aioredis.Redis) -> str:
     job_id = str(uuid.uuid4())
     num_companies = len(company_ids)
     chunks = math.ceil(num_companies / chunk_size)
@@ -155,11 +155,11 @@ async def create_company_chunking_job(chunk_size, company_ids, target_collection
 
     for i in range(chunks):
         chunk = company_ids[i * chunk_size: (i + 1) * chunk_size]
-        background_tasks.add_task(process_company_chunk_with_limit, job_id, chunk, target_collection, db)
+        background_tasks.add_task(process_company_chunk_with_limit, job_id, chunk, target_collection, db,redis)
 
     return job_id
 
-async def process_company_chunk(job_id: str, chunk: list, target_collection_id: int, db: Session):
+async def process_company_chunk(job_id: str, chunk: list, target_collection_id: int, db: Session, redis: aioredis.Redis):
     companies_in_target = db.execute(
         select(database.CompanyCollectionAssociation.company_id)
         .filter(database.CompanyCollectionAssociation.collection_id == target_collection_id)
@@ -179,6 +179,8 @@ async def process_company_chunk(job_id: str, chunk: list, target_collection_id: 
 
     await run_in_threadpool(lambda: addAndCommit(new_entries))
 
+    await getAllCompaniesForCache(db,target_collection_id,redis)
+
     update_job_progress(job_id)
 
 @router.post("/moveMultiple")
@@ -186,6 +188,7 @@ async def move_mult_companies(
     payload: MoveMultCompaniesInput,
     background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
+    redis: aioredis.Redis = Depends(database.get_redis)
 ):
     target_collection = get_collection_by_id(payload.target_collection,db)
     if not target_collection:
@@ -195,7 +198,7 @@ async def move_mult_companies(
     if not source_collection:
         raise HTTPException(status_code=404, detail="Source collection not found")
 
-    job_id = await create_company_chunking_job(10,payload.company_ids,payload.target_collection,db,background_tasks)
+    job_id = await create_company_chunking_job(10,payload.company_ids,payload.target_collection,db,background_tasks,redis)
 
     return MoveMultCompaniesOutput(
         job_id = job_id,
@@ -207,6 +210,7 @@ async def move_all_companies(
     payload: MoveAllCompaniesInput,
     background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
+    redis: aioredis.Redis = Depends(database.get_redis)
 ):
     target_collection = get_collection_by_id(payload.target_collection,db)
     if not target_collection:
@@ -222,7 +226,7 @@ async def move_all_companies(
 
     company_ids = [company.company_id for company in companies_in_source]
 
-    job_id = await create_company_chunking_job(100,company_ids,payload.target_collection,db,background_tasks)
+    job_id = await create_company_chunking_job(500,company_ids,payload.target_collection,db,background_tasks,redis)
 
     return MoveMultCompaniesOutput(
         job_id = job_id,
@@ -255,49 +259,39 @@ async def get_job_status(
     
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
-
-
-#Redis implementation that ended up providing a negliglible benefit 
-
-async def get_redis():
-    return redis
-
-@router.post("/cache_companies")
-async def cache_companies(
-    companies: list[CompanyOutput],
-    selectedCollectionId: str,
-    offset: int = Query(0),
-    pageSize: int = Query(25),
-    redis=Depends(get_redis)
-):
-    cache_key = generate_cache_key(selectedCollectionId, offset, pageSize)
     
-    companies_json = json.dumps([company.dict() for company in companies])
+async def getAllCompaniesForCache(db,collection_id,redis):
+    query = (
+        db.query(database.CompanyCollectionAssociation, database.Company)
+        .join(database.Company)
+        .filter(database.CompanyCollectionAssociation.collection_id == collection_id)
+    )
+    def company_to_dict(company):
+        return {
+            "id": company.id,
+            "name": company.company_name,
+    }
+    all_results = query.all()
+    all_companies = [company_to_dict(company) for _, company in all_results]
+    await cache_companies(redis,all_companies,collection_id)
+    return all_companies
+
+
+async def cache_companies(
+    redis:aioredis.Redis,
+    companies: list[CompanyOutput],
+    collection_id: str,
+):
+    cache_key = str(collection_id)
+    
+    companies_json = json.dumps(companies)
     
     await redis.set(cache_key, companies_json)
     
-    return {"message": f"Companies cached successfully for {selectedCollectionId}, offset {offset}, pageSize {pageSize}"}
-
-@router.get("/get_cached_companies")
-async def get_cached_companies(
-    selectedCollectionId: str,
-    offset: int = Query(0),
-    pageSize: int = Query(25),
-    redis=Depends(get_redis)
-):
-    cache_key = generate_cache_key(selectedCollectionId, offset, pageSize)
-    
-    companies_json = await redis.get(cache_key)
-    
-    if companies_json is None:
-        return {"message": f"No companies found in cache for {selectedCollectionId}, offset {offset}, pageSize {pageSize}"}
-    
-    companies = json.loads(companies_json)
-    
-    return {"companies": companies}
+    return {"message": f"Companies cached successfully for {collection_id}"}
 
 
 @router.delete("/flush_redis")
-async def flush_redis(redis=Depends(get_redis)):
+async def flush_redis(redis=Depends(database.get_redis)):
     await redis.flushall()
     return {"message": "All keys deleted from Redis"}

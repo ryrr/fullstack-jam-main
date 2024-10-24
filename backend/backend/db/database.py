@@ -18,12 +18,20 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
+import redis.asyncio as aioredis
+
 SQLALCHEMY_DATABASE_URL = os.getenv('DATABASE_URL')
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+redis_client = aioredis.from_url(f"redis://{REDIS_HOST}:{REDIS_PORT}", decode_responses=True)
+
+async def get_redis() -> aioredis.Redis:
+    return redis_client
 
 def get_db():
     db = SessionLocal()
