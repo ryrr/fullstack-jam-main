@@ -7,7 +7,8 @@
 - Along with this I used the `run_in_threadpool` method from `fastapi.concurrency` to set these chunked tasks to run in the background and not block the event loop.
 - I also set up an endpoint to stream data back to our client to let the client know the status of their job, I implemented this using a `StreamingResponse` to provide light weight SSE (Server Sent Events)
 - Related to this I set up a very simple in-memory store to keep track of the jobs that are currently running, it's just a python dict that uses the jobId to key values that tell us how many chunks remain to be processed 
-- I also implemented a cache using `redis` that can cache/retreive companies if the DB is super slow (ended up being overkill)
+- I also implemented a cache using `redis` that can cache/retreive companies, this is used because the join that is used to retreive companies is super slow on a ton of association
+- Basicially all the companies are retreived from Redis, in this app it is basicially acting as our READ DB and POSTGRES is acting as our WRITE DB. This keeps the app resposive and delegates the JOINS that update our data to only when new data is written (caching FN called on chunk completion) 
 - ### Frontend
 - Set up a simple debounce on the `useEffect` that provides our grid with companies to render, stopping a lot of extra clogging requests when a user scrolls many pages at once
 - Added a Widget to allow users to move items between lists, uses `select` elements and the currently selected collection to determine an action to take 
@@ -18,13 +19,13 @@
 - I feel like just using a job queue library like `celery` was the obvious way to do this if you want your solution to scale across many users and make it to production 
 - However I think my solution is better suited for the task given as it's more lightweight and dosen't introduce a ton of unneccesary features and overhead, plus it was fun to figure it out without using a big library
 - I also didn't go too in depth with the styling, would've been fun to do more with it. Kept it simple for the sake of time, I think the UI is decent enough
-- I also don't think a flawless experience is possible with a handicapped DB like this one, I think it works pretty well but obviously the responses are not totally instant. 
+- I also don't think a flawless experience is possible with a handicapped DB like this one, I think it works pretty well but obviously the processes take awhile and the replies are not instant 
 - I also assumed we wanted NO DUPLICTATES in the system, the specs didn't say anything about it. Nor did it say anything about REMOVAL, so I assumed we just wanted to add from list to list and not remove anything 
 - I assume we couldn't just remove the Jamming FN from main.py (ha ha)
 # Next Time
 - Would've liked to work on the UI more (Adding a ton of Jobs ends up wonky on the UI, and the Widget just looks OK)
 - Would've been cool to learn Celery or some other job queue framework 
-- Obviously would like to optimize as much as possible and find a better way to implement Redis
+- Obviously would like to optimize as much as possible and find an even better way to implement our READ DB, would be better to setup another postgres instance and wire it up with more complex monitoring and logic  
 - Would like to write unit tests 
 - Actual perfomance testing and metrics system, figuring out mathmaticially how to eek out the best possible performance 
 - Make the backend code organization a little better, I ended up leaving a bunch of helper FNs and unneccessary stuff inside companies.py
